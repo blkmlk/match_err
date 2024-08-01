@@ -1,6 +1,6 @@
 [package]
 name = "match_err"
-version = "0.1.0"
+version = "0.1.3"
 edition = "2021"
 homepage = "https://github.com/blkmlk/match_err"
 license = "MIT"
