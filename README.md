@@ -16,7 +16,7 @@ if let Err(e) = err {
 ## Examples
 
 ```rust
-use match_err::match_err;
+use match_err::*;
 
 #[derive(thiserror::Error, Debug)]
 enum Error {
@@ -28,7 +28,7 @@ enum Error {
 
 let err: Result<(), _> = Err(anyhow!(Error::NotFound));
 
-match_err!(err, Error, {
+match_if_err!(err, Error, {
     NotFound => println!("not found"),
     Custom(msg) => println!("custom message: {}", msg),
     _ => println!("unknown")
