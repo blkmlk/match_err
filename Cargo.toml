@@ -11,3 +11,7 @@ repository = "https://github.com/blkmlk/match_err"
 readme = "README.md"
 
 [dependencies]
+
+[dev-dependencies]
+thiserror = "1.0.63"
+anyhow = "1.0.86"
