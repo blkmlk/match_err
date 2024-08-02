@@ -1,11 +1,11 @@
 [package]
 name = "match_err"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 homepage = "https://github.com/blkmlk/match_err"
 license = "MIT"
 description = "Macro for matching enum-like errors"
-keywords = ["macro", "anyhow", "downcast", "downcast_ref", "match"]
+keywords = ["macro", "anyhow", "downcast", "error", "match"]
 categories = ["development-tools::testing"]
 repository = "https://github.com/blkmlk/match_err"
 readme = "README.md"
