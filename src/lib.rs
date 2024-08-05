@@ -1,13 +1,13 @@
 //! # match_err
 //!
-//! Macro for quick matching errors against enum-like error types
+//! Macro for quick matching and asserting errors against enum-like error types
 //!
 //! Helps to avoid writing long and tedious structures like:
 //! ```rust
 //! if let Err(e) = err {
 //!     if let Some(e) = e.downcast_ref::<Error>() {
 //!         match e {
-//!         ...
+//!             ...
 //!         }
 //!     }
 //! }
@@ -17,6 +17,7 @@
 //!
 //! ```rust
 //! use match_err::*;
+//! use anyhow::anyhow;
 //!
 //! #[derive(thiserror::Error, Debug)]
 //! enum Error {
@@ -36,7 +37,7 @@
 //! ```
 
 
-/// Matches an error against an enum-like error type by hiding the usage of downcast_ref method
+/// Matches the error against an enum-like error type by hiding the usage of downcast_ref method
 ///
 /// # Examples
 /// ```
@@ -115,4 +116,65 @@ macro_rules! match_if_err {
     ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:ident),* ) )? => $arm:expr ),* $(,)? }) => (
         match_if_err!($any, $ty, { $( $variant $( ( $($inner),* ) )? => $arm ),*, _ => {} })
     );
+}
+
+/// Asserts the variable is an error and then asserts it against an enum-like error type by hiding the usage of downcast_ref method
+/// The error is required to implement PartialEq
+///
+/// # Examples
+/// ```
+///  use match_err::*;
+///  use anyhow::anyhow;
+///
+///  #[derive(thiserror::Error, Debug, PartialEq)]
+///  enum Error {
+///     #[error("not found")]
+///     NotFound,
+///     #[error("custom: {0}")]
+///     Custom(String),
+///  }
+///
+///  let err: Result<(), _> = Err(anyhow!(Error::Custom(String::from("internal"))));
+///
+///  assert_if_error!(err, Error, Custom(String::from("internal")), "invalid");
+/// ```
+#[macro_export]
+macro_rules! assert_if_error {
+    ($var:expr, $ty:ty, $variant:ident $( ( $inner:expr ) )?  $(, $($arg:tt)+)? ) => (
+        if let Err(err) = $var {
+            assert_error!(err, $ty, $variant $( ( $inner ) )?  $(, $($arg)+)? );
+        } else {
+            assert!(false, "not an error")
+        }
+    )
+}
+
+/// Asserts the error against an enum-like error type by hiding the usage of downcast_ref method
+/// The error is required to implement PartialEq
+///
+/// # Examples
+/// ```
+///  use match_err::*;
+///  use anyhow::anyhow;
+///
+///  #[derive(thiserror::Error, Debug, PartialEq)]
+///  enum Error {
+///     #[error("not found")]
+///     NotFound,
+///     #[error("custom: {0}")]
+///     Custom(String),
+///  }
+///
+///  let err = anyhow!(Error::Custom(String::from("internal")));
+///
+///  assert_error!(err, Error, Custom(String::from("internal")));
+/// ```
+#[macro_export]
+macro_rules! assert_error {
+    ($var:expr, $ty:ty, $variant:ident $( ( $inner:expr ) )? $(, $($arg:tt)+)? ) => (
+        match $var.downcast_ref::<$ty>() {
+            Some(e) if e == &<$ty>::$variant $( ( $inner ) )? => assert!(true),
+            _ => assert!(false $(, $($arg)+)? ),
+        }
+    )
 }
