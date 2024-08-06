@@ -50,23 +50,32 @@
 ///     NotFound,
 ///     #[error("custom: {0}")]
 ///     Custom(String),
+///     #[error("tuple error")]
+///     Tuple((i32, i32))
 ///  }
 ///
 ///  let err = anyhow!(Error::NotFound);
 ///
 ///  match_err!(err, Error, {
 ///     NotFound => assert!(true),
-///     Custom(msg) => assert!(false),
+///     Custom(ref msg) => assert!(false),
+///     Tuple((x, y)) => assert!(x == y),
 ///     _ => assert!(false)
-///  })
+///  });
+///
+///  match_err!(err, Error, {
+///     NotFound => assert!(true),
+///     Custom(msg) => assert!(false),
+///     Tuple((x, y)) => assert!(x == y)
+///  });
 /// ```
 #[macro_export]
 macro_rules! match_err {
-    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:ident),* ) )? => $arm:expr ),*, _ => $default:expr } ) => (
+    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:tt)+ ))? => $arm:expr ),*, _ => $default:expr } ) => (
         if let Some(e) = $any.downcast_ref::<$ty>() {
             match e {
                 $(
-                    $ty::$variant $( ( $(ref $inner),* ) )? => $arm,
+                    $ty::$variant $( ( $($inner)+ ) )? => $arm,
                 )*
                 _ => $default
             }
@@ -75,8 +84,8 @@ macro_rules! match_err {
         }
     );
 
-    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:ident),* ) )? => $arm:expr ),* $(,)? }) => (
-        match_err!($any, $ty, { $( $variant $( ( $($inner),* ) )? => $arm ),*, _ => {} })
+    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:tt)+ ) )? => $arm:expr ),* $(,)? }) => (
+        match_err!($any, $ty, { $( $variant $( ( $($inner)+ ) )? => $arm ),*, _ => {} })
     );
 }
 
@@ -93,6 +102,8 @@ macro_rules! match_err {
 ///     NotFound,
 ///     #[error("custom: {0}")]
 ///     Custom(String),
+///     #[error("tuple error")]
+///     Tuple((i32, i32))
 ///  }
 ///
 ///  let err: Result<(), _> = Err(anyhow!(Error::NotFound));
@@ -100,21 +111,28 @@ macro_rules! match_err {
 ///  match_if_err!(err, Error, {
 ///     NotFound => assert!(true),
 ///     Custom(msg) => assert!(false),
+///     Tuple((x, y)) => assert!(x == y),
 ///     _ => assert!(false)
-///  })
+///  });
+///
+///  match_if_err!(err, Error, {
+///     NotFound => assert!(true),
+///     Custom(msg) => assert!(false),
+///     Tuple((x, y)) => assert!(x == y),
+///  });
 /// ```
 #[macro_export]
 macro_rules! match_if_err {
-    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:ident),* ) )? => $arm:expr ),*, _ => $default:expr } ) => (
-        if let Err(e) = $any {
-            match_err!(e, $ty, { $( $variant $( ( $($inner),* ) )? => $arm ),*, _ => $default })
+    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:tt)+ ) )? => $arm:expr ),*, _ => $default:expr } ) => (
+        if let Err(ref e) = $any {
+            match_err!(e, $ty, { $( $variant $( ( $($inner)+ ) )? => $arm ),*, _ => $default })
         } else {
             $default
         }
     );
 
-    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:ident),* ) )? => $arm:expr ),* $(,)? }) => (
-        match_if_err!($any, $ty, { $( $variant $( ( $($inner),* ) )? => $arm ),*, _ => {} })
+    ( $any:expr, $ty:ident, { $( $variant:ident $( ( $($inner:tt)+ ) )? => $arm:expr ),* $(,)? }) => (
+        match_if_err!($any, $ty, { $( $variant $( ( $($inner)+ ) )? => $arm ),*, _ => {} })
     );
 }
 
@@ -132,16 +150,20 @@ macro_rules! match_if_err {
 ///     NotFound,
 ///     #[error("custom: {0}")]
 ///     Custom(String),
+///     #[error("tuple error")]
+///     Tuple((i32, i32))
 ///  }
 ///
 ///  let err: Result<(), _> = Err(anyhow!(Error::Custom(String::from("internal"))));
+///  assert_if_error!(err, Error, Custom(String::from("internal")));
 ///
-///  assert_if_error!(err, Error, Custom(String::from("internal")), "invalid");
+///  let err: Result<(), _> = Err(anyhow!(Error::Tuple((1,1))));
+///  assert_if_error!(err, Error, Tuple((1,1)), "error message");
 /// ```
 #[macro_export]
 macro_rules! assert_if_error {
     ($var:expr, $ty:ty, $variant:ident $( ( $inner:expr ) )?  $(, $($arg:tt)+)? ) => (
-        if let Err(err) = $var {
+        if let Err(ref err) = $var {
             assert_error!(err, $ty, $variant $( ( $inner ) )?  $(, $($arg)+)? );
         } else {
             assert!(false, "not an error")
@@ -163,11 +185,15 @@ macro_rules! assert_if_error {
 ///     NotFound,
 ///     #[error("custom: {0}")]
 ///     Custom(String),
+///     #[error("tuple error")]
+///     Tuple((i32, i32))
 ///  }
 ///
 ///  let err = anyhow!(Error::Custom(String::from("internal")));
-///
 ///  assert_error!(err, Error, Custom(String::from("internal")));
+///
+///  let err = anyhow!(Error::Tuple((1,1)));
+///  assert_error!(err, Error, Tuple((1,1)), "error message");
 /// ```
 #[macro_export]
 macro_rules! assert_error {
